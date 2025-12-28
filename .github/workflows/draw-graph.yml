@@ -1,0 +1,53 @@
+name: Draw Contribution Graph
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 0 * * 0"
+
+jobs:
+  draw:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0 
+
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.25'
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "lee sander"
+          git config --global user.email "lee@leesander.com"
+
+      - name: Reset History
+        run: |
+          # Create a new orphan branch to clear history
+          git checkout --orphan latest_branch
+          
+          # Add only the necessary files to preserve them
+          git add main.go .github/workflows/draw-graph.yml README.md go.mod
+          
+          # Commit the "initial" state
+          git commit -m "Resetting history for new graph"
+
+      - name: Generate Commits
+        run: go run main.go
+
+      - name: Push Changes
+        run: |
+          # Delete the old main branch pointer (locally)
+          git branch -D main || true
+          
+          # Rename current branch to main
+          git branch -m main
+          
+          # Force push to overwrite remote history
+          git push -f origin main
